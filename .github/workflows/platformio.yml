@@ -1,16 +1,21 @@
-name: PlatformIO Build
+name: CatOS Watch ESP32-C3 Build
 
 on:
   push:
     branches: [ main ]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  build-c3:
+    name: Build ESP32-C3 SuperMini firmware
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -18,18 +23,61 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install PlatformIO CLI
+      - name: Install PlatformIO and esptool
         run: |
-          pip install platformio
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade platformio esptool
 
-      - name: Restore PlatformIO Cache
-        uses: actions/cache@v3
+      - name: Build CatOS for ESP32-C3
+        run: |
+          pio run -e catos_c3
+
+      - name: Create single-file flash image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUILD_DIR=".pio/build/catos_c3"
+          FW="$BUILD_DIR/firmware.bin"
+          PART="$BUILD_DIR/partitions.bin"
+
+          test -s "$FW"
+          test -s "$PART"
+
+          BOOTLOADER="$BUILD_DIR/bootloader.bin"
+          if [ ! -s "$BOOTLOADER" ]; then
+            echo "Bootloader not found at $BOOTLOADER"
+            find "$BUILD_DIR" -maxdepth 1 -type f -print
+            exit 1
+          fi
+
+          python -m esptool \
+            --chip esp32c3 \
+            merge-bin \
+            --format raw \
+            --flash-mode keep \
+            --flash-freq keep \
+            --flash-size keep \
+            -o "$BUILD_DIR/CatOS-C3-SuperMini-full.bin" \
+            0x0 "$BOOTLOADER" \
+            0x8000 "$PART" \
+            0xe000 "$HOME/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin" \
+            0x10000 "$FW"
+
+          python -m esptool --chip esp32c3 image-info "$BUILD_DIR/CatOS-C3-SuperMini-full.bin"
+
+          mkdir -p dist
+          cp "$FW" dist/CatOS-C3-SuperMini-firmware.bin
+          cp "$PART" dist/CatOS-C3-SuperMini-partitions.bin
+          cp "$BOOTLOADER" dist/CatOS-C3-SuperMini-bootloader.bin
+          cp "$BUILD_DIR/CatOS-C3-SuperMini-full.bin" dist/CatOS-C3-SuperMini-full.bin
+
+          sha256sum dist/*.bin | tee dist/SHA256SUMS.txt
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
         with:
-          path: |
-            ~/.platformio
-            .pio
-          key: ${{ runner.os }}-platformio-${{ hashFiles('**/platformio.ini') }}
-
-      - name: Build
-        run: |
-          pio run
+          name: CatOS-C3-SuperMini-firmware
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
