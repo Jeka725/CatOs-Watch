@@ -49,6 +49,7 @@
 #include "Hopper_CatOS.h"
 #include "MicroCity_CatOS.h"
 #include "DoomNano_CatOS.h"
+#include "Tetris_CatOS.h"
 #define USE_NIMBLE
 #include <BleMouse.h>
 #include <DFRobot_BMI160.h>
