@@ -3,6 +3,9 @@
 #include <GyverOLED.h>
 #include "GyverButton.h"
 
+void reset_buttons();
+void buttons_tick();
+
 static void tetrisGame() {
   const int W=10,H=16,CELL=4;
   static uint8_t board[H][W];
