@@ -20,6 +20,7 @@ struct GraphMenu {
 
 // Игры и приложения
 extern void dinosaurGame();
+extern void tetrisGame();
 extern void pet_menu();
 extern void rouletteGame();
 extern void snakeGame();
@@ -58,6 +59,7 @@ void navigate_graphical_menu(GraphMenu* menu);
 
 // --- 1. МЕНЮ ИГР ---
 GraphMenuItem items_Games[] = {
+  {"Тетрис",   nullptr,                    tetrisGame},
   {"Дино",     dino_icon_24x24,            dinosaurGame},
   {"Arduboy",   nullptr,                   open_arduboy_games},
   {"Пинг-Понг",dino_icon_24x24,            playPong},
